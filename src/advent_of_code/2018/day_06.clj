@@ -1,4 +1,5 @@
-(ns advent-of-code.2018.day-06)
+(ns advent-of-code.2018.day-06
+  (:require [clojure.math.combinatorics :as combo]))
 
 (def test-data [[1 1]
                 [1 6]
@@ -61,20 +62,68 @@
 (defn- find-bounds [col]
   (let [x-points (sort-by first col)
         y-points (sort-by second col)]
-    {:x-low (ffirst x-points)
+    {:x-low  (ffirst x-points)
      :x-high (first (last x-points))
-     :y-low (last (first y-points))
+     :y-low  (last (first y-points))
      :y-high (last (last y-points))}))
 
+
+(defn manhattan-distance [[x1 y1] [x2 y2]]
+  (+ (Math/abs (- x1 x2)) (Math/abs (- y1 y2))))
+
+(defn- point-belongs-to [[x y] col]
+  (let [distance-to-points (->> (map (fn [point] (vector (manhattan-distance [x y] point) point)) col)
+                                (sort-by first))
+        smallest-distance (ffirst distance-to-points)
+        points-belongs-to (filter #(= smallest-distance (first %)) distance-to-points)]
+    (if (> (count points-belongs-to) 1)
+      :multiple
+      (second (first points-belongs-to)))))
+
 (defn- determine-finite [col]
-  (let [{:keys [x-low x-high y-low y-high]} (find-bounds col)]
-    (map
-      (fn [[x y]]
-        {:point [x y]
-         :is-infinite? (cond
-                         (>= x-low x) true
-                         (<= x-high x) true
-                         (>= y-low y) true
-                         (<= y-high y) true
-                         :else false)})
-      col)))
+  (let [{:keys [x-low x-high y-low y-high]} (find-bounds col)
+        width (range 0 (inc x-high))
+        height (range 0 (inc y-high))
+        field (combo/cartesian-product width height)
+        points (filter (fn [[x y]]
+                         (or (contains? #{x-low x-high} x)
+                             (contains? #{y-low y-high} y)))
+                       field)]
+    (disj (->> (map (fn [point] (point-belongs-to point col)) points)
+               set)
+          :multiple)))
+
+(defn get-infinite-points [col]
+  (let [determined (determine-finite col)]
+    determined))
+
+(defn part-1 [w h col]
+  (let [infinite-points (get-infinite-points col)
+        field (combo/cartesian-product (range 0 w) (range 0 h))
+        initial-data (reduce (fn [acc point]
+                               (if (contains? infinite-points point)
+                                 (assoc acc point :infinite)
+                                 (assoc acc point 0)))
+                             {}
+                             col)]
+    (reduce (fn [acc point]
+              (let [belongs-to (point-belongs-to point col)]
+                (if (or (= :multiple belongs-to)
+                        (= :infinite (get acc belongs-to)))
+                  acc
+                  (assoc acc belongs-to (inc (get acc belongs-to))))))
+            initial-data
+            field)))
+
+(defn- manhattan-to-all-points [[x y] col]
+  (map (fn [point] (manhattan-distance [x y] point)) col))
+
+(defn- manhattan-all-within [point col within]
+  (< (reduce + (manhattan-to-all-points point col)) within))
+
+(defn part-2 [w h col within]
+  (let [field (combo/cartesian-product (range 0 w) (range 0 h))]
+    (filter (fn [point] (manhattan-all-within point col within)) field)))
+
+
+
