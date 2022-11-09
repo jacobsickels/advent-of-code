@@ -72,7 +72,9 @@
   (+ (Math/abs (- x1 x2)) (Math/abs (- y1 y2))))
 
 (defn- point-belongs-to [[x y] col]
-  (let [distance-to-points (->> (map (fn [point] (vector (manhattan-distance [x y] point) point)) col)
+  (let [distance-to-points (->> (map (fn [point]
+                                       (vector (manhattan-distance [x y] point) point))
+                                     col)
                                 (sort-by first))
         smallest-distance (ffirst distance-to-points)
         points-belongs-to (filter #(= smallest-distance (first %)) distance-to-points)]
@@ -80,7 +82,7 @@
       :multiple
       (second (first points-belongs-to)))))
 
-(defn- determine-finite [col]
+(defn- get-infinite-points [col]
   (let [{:keys [x-low x-high y-low y-high]} (find-bounds col)
         width (range 0 (inc x-high))
         height (range 0 (inc y-high))
@@ -92,10 +94,6 @@
     (disj (->> (map (fn [point] (point-belongs-to point col)) points)
                set)
           :multiple)))
-
-(defn get-infinite-points [col]
-  (let [determined (determine-finite col)]
-    determined))
 
 (defn part-1 [w h col]
   (let [infinite-points (get-infinite-points col)
@@ -123,7 +121,7 @@
 
 (defn part-2 [w h col within]
   (let [field (combo/cartesian-product (range 0 w) (range 0 h))]
-    (filter (fn [point] (manhattan-all-within point col within)) field)))
+    (count (filter (fn [point] (manhattan-all-within point col within)) field))))
 
 
 

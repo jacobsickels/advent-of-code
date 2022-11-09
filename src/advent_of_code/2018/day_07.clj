@@ -47,13 +47,130 @@
           (str found next-found))))))
 
 
-; Maybe something like this
-; ("C" "C" "C" "AF" "BF" "BF" "DF" "DF" "DF" "DF" "D" "E" "E" "E" "E" "E")
-; count 0 workers {"C" 3}       list ()
-; count 1 workers {"C" 2}       list ("C")
-; count 2 workers {"C" 1}       list ("C" "C")
-; count 3 workers {"A" 1 "F" 6} list ("C" "C" "C")
-; count 4 workers {"B" 2 "F" 5} list ("C" "C" "C" "AF")
-; count 5 workers {"B" 1 "F" 4} list ("C" "C" "C" "AF" "BF")
+(defn remove-all-character-no-deps [characters col]
+  (remove #(contains? (set characters) (first %)) col))
 
-;; Will also have to store characters that have their work completed, can use this check to break
+(defn work-amount [col augment]
+  (into {} (map-indexed (fn [i c] (vector c (+ i augment))) (get-characters col))))
+
+(defn- get-available-work [workers characters col]
+  (let [already-being-done (set (map first workers))]
+    (filter (fn [ch] (not (has-dependencies? ch col)))
+            (remove #(contains? already-being-done %) characters))))
+
+(defn get-work-amounts [workers col augment]
+  (let [initial-data (get-data col)
+        work-amt (work-amount initial-data augment)]
+    (loop [data initial-data
+           characters (get-characters data)
+           work-amounts []]
+      (if (empty? characters)
+        (partition 2 (flatten work-amounts))
+        (let [no-deps (get-available-work workers characters data)
+              work (map #(vector % (get work-amt %)) no-deps)]
+          (recur (remove-all-character-no-deps no-deps data)
+                 (remove #(contains? (set no-deps) %) characters)
+                 (conj work-amounts work)))))))
+
+(defn- can-do-work? [workers]
+  (some empty? workers))
+
+;(defn part-2 [col]
+;  (let [initial-data (get-data col)]
+;    (loop [data initial-data
+;           characters (get-characters initial-data)
+;           work (get-work-amounts col)
+;           workers (repeat 2 [])
+;           iterations 0]
+;      [characters work workers]
+;      (if (empty? characters)
+;        iterations
+;        (let [available-work (get-available-work characters data)]
+;          (if (and available-work (can-do-work? workers))
+;            (recur ())))))))
+
+;; (defn do-work [worker]
+(defn tick-work [worker]
+  (if (empty? worker)
+    []
+    [(first worker) (dec (second worker))]))
+
+(defn do-work [workers]
+  (map tick-work workers))
+
+(defn is-work-done? [worker]
+  (zero? (second worker)))
+
+(defn- give-single-work-to-workers [workers available-single-work]
+  (first (reduce (fn [[acc given] worker]
+                   (if (and (not given) (empty? worker))
+                     [(conj acc available-single-work) true]
+                     [(conj acc worker) given]))
+                 [[] false]
+                 workers)))
+
+(defn give-all-work-to-workers [work workers available]
+  (map vec (reduce (fn [acc av-work]
+                     (give-single-work-to-workers acc av-work))
+                   workers
+                   (filter #(contains? (set available) (first %)) work))))
+
+(defn- worker-can-do-work? [worker]
+  (empty? worker))
+
+(defn open-workers? [workers]
+  (some worker-can-do-work? workers))
+
+(defn- worker-finished-work? [workers]
+  (some is-work-done? (remove empty? workers)))
+
+(defn- clear-finished-workers [workers]
+  (map (fn [worker]
+         (if (or (empty? worker) (zero? (second worker)))
+           []
+           worker))
+       workers))
+
+(defn- get-finished-work [workers]
+  (->> (remove empty? workers)
+       (filter (fn [worker] (zero? (second worker))))
+       (map first)))
+
+(defn remove-finished-work-from-data [finished-work data]
+  (remove #(contains? (set finished-work) (first %)) data))
+
+(defn part-2 [col worker-count augment]
+  (let [initial-workers (repeat worker-count [])]
+    (loop [data (get-data col)
+           work (get-work-amounts initial-workers col augment)
+           workers (give-all-work-to-workers
+                     work
+                     initial-workers
+                     (get-available-work initial-workers (map first work) data))
+           iterations 0]
+
+      (cond
+        (empty? work)
+        iterations
+
+        (worker-finished-work? workers)
+        (let [cleared-workers (clear-finished-workers workers)
+              finished-work (get-finished-work workers)
+              new-work (remove #(contains? (set finished-work) (first %)) work)
+              new-data (remove-finished-work-from-data finished-work data)]
+          (recur new-data
+                 new-work
+                 (give-all-work-to-workers
+                   new-work
+                   (do-work cleared-workers)
+                   (get-available-work workers (map first new-work) new-data))
+                 (inc iterations)))
+
+        :else
+        (recur
+          data
+          work
+          (do-work workers)
+          (inc iterations))))))
+
+
