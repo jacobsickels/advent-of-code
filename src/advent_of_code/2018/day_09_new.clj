@@ -1,39 +1,43 @@
-(ns advent-of-code.2018.day-09
+(ns advent-of-code.2018.day-09-new
   (:require [clojure.set :as set]))
 
-(defn insert [v i e] (vec (concat (subvec v 0 i) [e] (subvec v i))))
-
 (defn insert-marble [marbles position marble]
-  (let [old-relation (get marbles position)]
-    [old-relation (assoc marbles position marble
-                                 marble old-relation)]))
+  (let [[old-left old-right] (get marbles position)
+        [r1 r2] (get marbles old-right)]
+    (if (= old-left old-right position)
+      [old-right (assoc marbles
+                   position [marble marble]
+                   marble [position position])]
+      [old-right (assoc marbles
+                   old-right [marble r2]
+                   position [old-left marble]
+                   marble [position old-right])])))
 
 (defn get-backwards-7-marble [marbles position]
-  (let [inverted-marbles (set/map-invert marbles)]
-    (loop [moves 0
-           check position]
-      (if (= moves 8)
-        check
-        (recur (inc moves) (get inverted-marbles check))))))
+  (loop [moves 0
+         check position]
+    (if (= moves 8)
+      check
+      (recur (inc moves) (first (get marbles check))))))
 
 (defn remove-marble [marbles position]
-  (let [inverted-marbles (set/map-invert marbles)
-        new-left (get inverted-marbles position)
-        old-relation (get marbles position)]
-    [(get marbles old-relation) (-> (dissoc marbles position)
-                                    (assoc new-left old-relation))]))
+  (let [[l r] (get marbles position)
+        [l1 _] (get marbles l)
+        [_ r2] (get marbles r)]
+    [(second (get marbles r)) (-> (dissoc marbles position)
+                                  (assoc r [l r2]
+                                         l [l1 r]))]))
 
 (defn remove-and-score [marbles position]
   (let [marble-to-remove (get-backwards-7-marble marbles position)]
     [marble-to-remove (remove-marble marbles marble-to-remove)]))
 
-(defn part-1 [player-count last-marble]
-  (loop [marbles {0 0}
+(defn play-game [player-count last-marble]
+  (loop [marbles {0 [0 0]}
          next-marble 1
          position 0
          scores {}
          player 1]
-    (when (zero? (mod next-marble 1000)) (println next-marble))
     (if (= next-marble last-marble)
       (second (apply max-key val scores))
       (if (zero? (mod next-marble 23))
@@ -54,6 +58,12 @@
             old-relation
             scores
             (mod (inc player) player-count)))))))
+
+(defn part-1 []
+  (play-game 405 71700))
+
+(defn part-2 []
+  (play-game 405 (* 100 71700)))
 
 (defn part-1-test []
   (map
