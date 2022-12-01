@@ -38,7 +38,6 @@
       (recur (rest arr)
              (assoc acc (first arr) (process-loop (make-loop (first arr)) col))))))
 
-
 (defn part-1 [col]
   (find-optimal-arrangement (get-unique-names col) col))
 
