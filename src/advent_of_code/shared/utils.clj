@@ -2,3 +2,7 @@
 
 (defn inclusive-range [start end]
   (range start (inc end)))
+
+
+(defn parse-int-col [col]
+  (map #(Integer/parseInt %) col))
