@@ -46,7 +46,7 @@
 
 (defn get-no-set-answer [fn]
   (->> (map fn data)
-       (remove empty?)
+       (filter true?)
        count))
 
 (defn part-1-no-set [] (get-no-set-answer overlapping-no-set?))
