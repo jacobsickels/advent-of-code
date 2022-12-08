@@ -95,5 +95,9 @@
          first
          second)))
 
+(defn col-starts-with? [col subcol]
+  (and (every? true? (map #(= %1 %2) col subcol))
+       (<= (count subcol) (count col))))
+
 
 

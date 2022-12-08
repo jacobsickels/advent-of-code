@@ -10,25 +10,27 @@
                (map #(str/split % #""))
                (map parse-int-col)))
 
+(defn get-tree-points [trees col]
+  (map (fn [[x y]] (nth (nth trees y) x)) col))
+
 (defn get-to-edges [trees [x y]]
   (let [width (count (first trees))
         height (count trees)
         top (map #(list %1 %2) (repeat (inc y) x) (range 0 (inc y)))
         left (map #(list %1 %2) (range 0 (inc x)) (repeat (inc x) y))
-        right (map #(list %1 %2) (range  x (inc width)) (repeat (-  width x) y))
+        right (map #(list %1 %2) (range  x (inc width)) (repeat (- width x) y))
         bottom (map #(list %1 %2) (repeat (- height y) x) (range y (inc height)))]
-    {:top (map (fn [[x y]] (nth (nth trees y) x)) top)
-     :left (map (fn [[x y]] (nth (nth trees y) x)) left)
-     :right (map (fn [[x y]] (nth (nth trees y) x)) (reverse right))
-     :bottom (map (fn [[x y]] (nth (nth trees y) x)) (reverse bottom))}))
+    {:top (get-tree-points trees top)
+     :left (get-tree-points trees left)
+     :right (get-tree-points trees (reverse right))
+     :bottom (get-tree-points trees (reverse bottom))}))
 
 (defn is-visible? [trees [x y]]
   (let [edges (get-to-edges trees [x y])]
-    [[x y]
-     (or (< (apply max (butlast (:top edges))) (last (:top edges)))
-         (< (apply max (butlast (:right edges))) (last (:right edges)))
-         (< (apply max (butlast (:left edges))) (last (:left edges)))
-         (< (apply max (butlast (:bottom edges))) (last (:bottom edges))))]))
+    (or (< (apply max (butlast (:top edges))) (last (:top edges)))
+        (< (apply max (butlast (:right edges))) (last (:right edges)))
+        (< (apply max (butlast (:left edges))) (last (:left edges)))
+        (< (apply max (butlast (:bottom edges))) (last (:bottom edges))))))
 
 (defn get-outer-points [width height]
   (->> (combo/cartesian-product (range 0 width) (range 0 height))
@@ -43,7 +45,7 @@
         inside-points (combo/cartesian-product (range 1 (dec width)) (range 1 (dec height)))
         outer-points (get-outer-points width height)
         cnt-visible-inside (->> (map #(is-visible? trees %) inside-points)
-                                (filter #(true? (second %)))
+                                (filter true?)
                                 count)]
     (+ (count outer-points) cnt-visible-inside)))
 
