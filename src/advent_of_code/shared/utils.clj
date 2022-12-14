@@ -22,3 +22,11 @@
   (/ (* a b) (gcd a b)))
 
 (defn lcmv [& v] (reduce lcm v))
+
+(defn points-between [[x1 y1] [x2 y2]]
+  (cond
+    (= x1 x2)
+    (map #(vec [x1 %]) (apply inclusive-range (sort [y1 y2])))
+
+    (= y1 y2)
+    (map #(vec [% y1]) (apply inclusive-range (sort [x1 x2])))))
