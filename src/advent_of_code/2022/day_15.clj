@@ -1,40 +1,25 @@
 (ns advent-of-code.2022.day-15
   (:require [clojure.math.combinatorics :as combo]
             [advent-of-code.shared.read-file :as read]
-            [clojure.set :as set]))
-
-(defn manhattan-distance [[x1 y1] [x2 y2]]
-  (+ (Math/abs (- x1 x2)) (Math/abs (- y1 y2))))
-
-(defn inclusive-range [start end]
-  (range start (inc end)))
-
-(defn parse-int-col [col]
-  (map #(Integer/parseInt %) col))
-
-(defn points-between [[x1 y1] [x2 y2]]
-  (cond
-    (= x1 x2)
-    (map #(vec [x1 %]) (apply inclusive-range (sort [y1 y2])))
-
-    (= y1 y2)
-    (map #(vec [% y1]) (apply inclusive-range (sort [x1 x2])))))
+            [clojure.set :as set]
+            [advent-of-code.shared.utils :as utils]
+            [advent-of-code.shared.point :as point]))
 
 (defn get-manhattan-points-around [[x1 y1] [x2 y2] height-filter]
-  (let [distance (manhattan-distance [x1 y1] [x2 y2])
+  (let [distance (point/manhattan-distance [x1 y1] [x2 y2])
         top-point [x1 (+ y1 distance)]
         bottom-point [x1 (- y1 distance)]
         left-point [(- x1 distance) y1]
         right-point [(+ x1 distance) y1]
         min-x (ffirst (sort-by first [top-point bottom-point left-point right-point]))
         max-x (first (last (sort-by first [top-point bottom-point left-point right-point])))]
-    (->> (points-between [min-x height-filter] [max-x height-filter])
-         (filter (fn [p1] (<= (manhattan-distance [x1 y1] p1) distance)))
+    (->> (utils/points-between [min-x height-filter] [max-x height-filter])
+         (filter (fn [p1] (<= (point/manhattan-distance [x1 y1] p1) distance)))
          set)))
 
 (def sensor-to-beacons (->> (read/read-file "resources/2022/day_15_example.txt")
                             (map #(re-seq #"-?\d+" %))
-                            (map parse-int-col)
+                            (map utils/parse-int-col)
                             (map #(partition 2 %))))
 
 (def sensors (set (map first sensor-to-beacons)))
@@ -58,12 +43,12 @@
 
 (defn get-beacon-ranges [[x1 y1] [x2 y2]]
   (println "TEST")
-  (let [distance (manhattan-distance [x1 y1] [x2 y2])
+  (let [distance (point/manhattan-distance [x1 y1] [x2 y2])
         top-point [x1 (+ y1 distance)]
         bottom-point [x1 (- y1 distance)]]
     (->> (map
            #(list %1 %2)
-           (points-between top-point bottom-point)
+           (utils/points-between top-point bottom-point)
            (concat (range 0 distance) (reverse (range 0 (inc distance)))))
          (reduce (fn [acc [[x y] amt]] (assoc acc y [[(- x amt) (+ x amt)]]))
                  {}))))
