@@ -1,6 +1,7 @@
 (ns advent-of-code.2022.day-16
   (:require [clojure.string :as str]
-            [advent-of-code.shared.read-file :as read]))
+            [advent-of-code.shared.read-file :as read]
+            [clojure.math.combinatorics :as combo]))
 
 (def weighted-graph
   {:s {:a 3 :d 4}
@@ -71,8 +72,8 @@
           {}
           data))
 
-(def graph (make-graph test-data))
-(def rates (make-rates test-data))
+(def graph (make-graph data))
+(def rates (make-rates data))
 
 (defn next-highest-path [valve visited time]
   (println valve)
@@ -95,6 +96,64 @@
       routes
       (let [next-options (mapcat #(next-highest-path (:valve %) (conj visited (:valve %)) time-left) routes)]
         next-options))))
+
+(defn all-valued-keys [data]
+  (->> (filter (fn [[k v]] (not (zero? v))) data)))
+
+(defn get-shorted-path-around-nodes [graph start path]
+  (loop [current start
+         check path
+         node-paths []]
+    (if (empty? check)
+      (apply concat node-paths)
+      (let [paths (->> (find-path graph current (first check))
+                       (sort-by count))]
+        (recur (first check)
+               (rest check)
+               (conj node-paths (first paths)))))))
+
+(defn pressure-released [graph rates opening-path]
+  (let [valued-valves (into {} (all-valued-keys rates))
+        valve-keys (set (map first valued-valves))]
+    (loop [walking-path (get-shorted-path-around-nodes graph "AA" opening-path)
+           valued-valves-path opening-path
+           minutes-left 29
+           pressures-to-add #{}
+           pressure 0]
+      (cond
+        (zero? minutes-left)
+        pressure
+
+        (and (empty? walking-path) (zero? minutes-left))
+        pressure
+
+        (empty? walking-path)
+        (recur walking-path
+               valued-valves-path
+               (dec minutes-left)
+               pressures-to-add
+               (+ pressure (reduce + pressures-to-add)))
+
+        (and (contains? valve-keys (first walking-path))
+             (= (first valued-valves-path) (first walking-path))
+             (not (contains? pressures-to-add (get valued-valves (first walking-path)))))
+        (recur (rest walking-path)
+               (rest valued-valves-path)
+               (dec minutes-left)
+               (conj pressures-to-add (get valued-valves (first walking-path)))
+               (+ pressure (reduce + (conj pressures-to-add (get valued-valves (first walking-path))))))
+
+        :else (recur (rest walking-path)
+                     valued-valves-path
+                     (dec minutes-left)
+                     pressures-to-add
+                     (+ pressure (reduce + pressures-to-add)))))))
+
+(defn part-1 []
+  (let [perms (combo/permutations (map first (all-valued-keys rates)))]
+    (->> (map #(pressure-released graph rates %) perms)
+         sort
+         last)))
 
 
 
