@@ -5,7 +5,7 @@
             [clojure.set :as set]
             [advent-of-code.shared.read-file :as read]))
 
-(def data (read/read-file "resources/day_22.txt"))
+(def data (read/read-file "resources/day_21.txt"))
 
 (def line "on x=10..12,y=10..12,z=10..12")
 
