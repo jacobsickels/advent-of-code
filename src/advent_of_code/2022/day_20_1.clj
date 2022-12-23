@@ -13,7 +13,9 @@
   (mod (second to-move) (dec col-size)))
 
 (defn get-number-away [linked-list to-move]
-  (loop [amount (mod (second to-move) (dec (count linked-list)))
+  (loop [amount (if (pos? (second to-move))
+                  (mod (second to-move) (dec (count linked-list)))
+                  (mod (second to-move) (count linked-list)))
          found to-move]
     (if (zero? amount)
       found
