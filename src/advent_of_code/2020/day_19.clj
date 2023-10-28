@@ -1,49 +1,60 @@
-(ns advent-of-code-2020.day-19
+(ns advent-of-code.2020.day-19
   (:require [clojure.string :as str]
-            [advent-of-code-2020.core :as core]))
+            [advent-of-code.shared.read-file :as read]))
 
 (def test-rules ["0: 4 1 5"
                  "1: 2 3 | 3 2"
                  "2: 4 4 | 5 5"
                  "3: 4 5 | 5 4"
-                 "4: a"
-                 "5: b"])
+                 "4: \"a\""
+                 "5: \"b\""])
 
-(def test-rules-2 {"0" "1 2"
-                   "1" "a"
-                   "2" "1 3 | 3 1"
-                   "3" "b"})
 
 (defn format-data [input]
-  (into (sorted-map) (map #(str/split % #": ") input)))
+  (apply merge (map #(let [[k v] (str/split % #": ")]
+                       (if (re-find #"[ab]" v)
+                         {k {:value (first (re-seq #"[ab]" v))}}
+                         {k {:value nil :regex (str/replace v #" " "") :deps (set (re-seq #"\d+" v))}}))
+                    input)))
 
-(defn parse-rules [start rules]
-  (let [rule (get rules start)]
-    (if (vector? rule)
-      (if (vector? (first rule))
-        (map #(map (fn [r] (parse-rules r rules)) %) rule)
-        (map #(parse-rules % rules) rule))
-      rule)))
+(def formatted (format-data (read/read-file "resources/2020/day-19-rules.txt")))
+;(def formatted (format-data test-rules))
+
+(defn replace-regex-with-deps-value [k formatted]
+  (let [replace-pattern (reduce (fn [acc item] (assoc acc item (:value (get formatted item)))) {} (:deps (get formatted k)))]
+    {k (merge (get formatted k)
+              {:value (str "("
+                           (str/replace (:regex (get formatted k))
+                                        (re-pattern (str/join "|" (:deps (get formatted k))))
+                                        replace-pattern)
+                           ")")})}))
+
+(defn deps-have-value? [k formatted]
+  (let [deps (:deps (get formatted k))]
+    (if (nil? deps)
+      false
+      (->> (map #(:value (get formatted %)) deps)
+           (every? #(not (nil? %)))))))
+
+(defn make-regex-for-deps [formatted]
+  (reduce (fn [acc [k v]]
+            (if (deps-have-value? k formatted)
+              (merge acc (replace-regex-with-deps-value k formatted))
+              (assoc acc k v)))
+          {}
+          formatted))
+
+(defn iterate-until-zero-has-value []
+  (loop [rules formatted]
+    (if (:value (get rules "0"))
+      rules
+      (recur (make-regex-for-deps rules)))))
 
 
-(defn parse-rules-regex [start rules]
-  (println start)
-  (loop [l (get rules start)]
-    (let [found (re-find #"\d+" l)]
-      (if (nil? found)
-        l
-        (let [parsed (parse-rules-regex found rules)]
-          (if (str/includes? parsed "|")
-            (recur (str/replace l found (str "(" parsed ")")))
-            (recur (str/replace l found parsed))))))))
-
-(defn day-19 []
-  (let [
-        rule-data (format-data (core/read-file "resources/2020-19-rules.txt"))
-        data (core/read-file "resources/2020-19-data.txt")
-        ;rule-data (format-data test-rules)
-        ;data ["ababbb" "bababa" "abbbab" "aaabbb" "aaaabbb"]
-        parsed-rule-str (parse-rules-regex "0" rule-data)
-        parsed-rule-string (str/replace parsed-rule-str #" " "")
-        parsed-rule-regex (re-pattern parsed-rule-string)]
-    (count (filter #(not (nil? (re-matches parsed-rule-regex %))) data))))
+(defn part-1 []
+  (let [rules (iterate-until-zero-has-value)
+        check-regex (get-in rules ["0" :value])
+        to-check (read/read-file "resources/2020/day-19-data.txt")]
+    (->> (map #(list % (first (re-matches (re-pattern check-regex) %))) to-check)
+         (filter (fn [[f s]] (= f s)))
+         count)))
