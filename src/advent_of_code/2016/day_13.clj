@@ -4,7 +4,9 @@
 
 (def input 1362)
 
-(defn is-wall? [[x y]]
+(defn is-wall?
+  "This function checks a point to see if it's a wall or an open space."
+  [[x y]]
   (let [int-num (+ (* x x)
                    (* 3 x)
                    (* 2 y x)
@@ -16,7 +18,8 @@
          count
          odd?)))
 
-(defn walkable-points [[x y]]
+(defn walkable-points
+  [[x y]]
   (let [points-around (->> (points/cardinal-points-around [x y])
                            (filter (fn [[x y]] (and (<= 0 x) (<= 0 y) (not (is-wall? [x y]))))))]
     points-around))
