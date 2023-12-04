@@ -1,5 +1,6 @@
 (ns advent-of-code.shared.point
-  (:require [clojure.math.combinatorics :as combo]))
+  (:require [clojure.math.combinatorics :as combo]
+            [advent-of-code.shared.utils :as utils]))
 
 (defn points-around [point]
   (remove (fn [p] (= point p))
@@ -18,3 +19,11 @@
 
 (defn manhattan-distance [[x1 y1] [x2 y2]]
   (+ (Math/abs (- x1 x2)) (Math/abs (- y1 y2))))
+
+(defn points-between [[x1 y1] [x2 y2]]
+  (cond
+    (= x1 x2)
+    (map #(vec [x1 %]) (apply utils/inclusive-range (sort [y1 y2])))
+
+    (= y1 y2)
+    (map #(vec [% y1]) (apply utils/inclusive-range (sort [x1 x2])))))
