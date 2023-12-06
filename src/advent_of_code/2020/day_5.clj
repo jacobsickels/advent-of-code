@@ -10,6 +10,7 @@
     (cond
       (high-check (first collection)) 
       (recur (rest collection) [(int (Math/ceil (/ (+ high low) 2))) high])
+
       (low-check (first collection))
       (recur (rest collection) [low (int (Math/floor (/ (+ high low) 2)))])
       (= high low) high)))
