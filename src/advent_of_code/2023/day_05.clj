@@ -61,59 +61,50 @@
     (or (includes? r2 fst1) (includes? r1 fst2))
     (or (overlaps? r1 r2) (some #(overlaps? r1 %) rest) (some #(overlaps? r2 %) rest))))
 
+;; https://github.com/narimiran/AdventOfCode2023/blob/main/clojure/day05.clj
 
 (def seed-ranges (->> (first data)
                       :values
                       (partition 2)
-                      (map (fn [[start len]] [start (+ start (dec len))]))))
+                      (map (fn [[start len]] {:start start :stop (+ start (dec len))}))
+                      (sort-by :start)))
 
-(defn parse-line [line]
-  (let [[dest src rng] (read/integers line)]
-    {:lo   src
-     :hi   (+ src (dec rng))
-     :diff (- dest src)}))
+(def part-2-data (->> (map :values (rest data))
+                      (map (fn [value-vectors]
+                             (->> (map (fn [[destination source length]]
+                                         {:lo   source
+                                          :hi   (+ source (dec length))
+                                          :diff (- destination source)})
+                                       value-vectors)
+                                  (sort-by :lo))))))
 
-(defn parse-maps [maps]
-  (->> (rest maps)
-       (map parse-line)
-       (sort-by :lo)))
-
-(defn run-seed [rule-maps]
-  (loop [seeds seed-ranges
-         rules rule-maps
+(defn convert-2 [srcs rules]
+  (loop [[{:keys [start stop]} & rem-srcs :as srcs] srcs
+         [{:keys [lo hi diff]} & rem-rules :as rules] rules
          result []]
-    (let [_ (println rules)
-          [start stop] (first seeds)
-          [destination source length] (first rules)
-          high (+ source (dec length))
-          low source
-          difference (- destination source)]
-      (if (or (empty? seeds) (empty? rules))
-        (sort-by :start (into result seeds))
-        (cond
-          (> start high) (recur seeds (rest rules) result)
-          (< stop low) (recur (rest seeds)
-                              rules
-                              (conj result {:start start
-                                            :stop  stop}))
-          (<= low start stop high) (recur (rest seeds)
-                                          rules
-                                          (conj result {:start (+ difference start)
-                                                        :stop  (+ difference stop)}))
-          (<= low start high stop) (recur (conj (rest seeds) {:start (inc high)
-                                                              :stop  stop})
-                                          (rest rules)
-                                          (conj result {:start (+ difference start)
-                                                        :stop  (+ difference high)}))
-          (<= start low stop high) (recur (rest seeds)
-                                         rules
-                                         (-> result
-                                             (conj {:start start
-                                                    :stop  (dec low)})
-                                             (conj {:start (+ difference low)
-                                                    :stop  (+ difference stop)}))))))))
+    (if (or (empty? srcs) (empty? rules))
+      (sort-by :start (into result srcs))
+      (cond
+        (> start hi)          (recur srcs rem-rules result)
+        (< stop lo)           (recur rem-srcs
+                                     rules
+                                     (conj result {:start start
+                                                   :stop  stop}))
+        (<= lo start stop hi) (recur rem-srcs
+                                     rules
+                                     (conj result {:start (+ diff start)
+                                                   :stop  (+ diff stop)}))
+        (<= lo start hi stop) (recur (conj rem-srcs {:start (inc hi)
+                                                     :stop  stop})
+                                     rem-rules
+                                     (conj result {:start (+ diff start)
+                                                   :stop  (+ diff hi)}))
+        (<= start lo stop hi) (recur rem-srcs
+                                     rules
+                                     (-> result
+                                         (conj {:start start
+                                                :stop  (dec lo)})
+                                         (conj {:start (+ diff lo)
+                                                :stop  (+ diff stop)})))))))
 
 
-(defn part-2 []
-  (let [[seeds & maps] (read/read-input-paragraphs "2023/day_05")]
-    [seeds (map parse-maps maps)]))
