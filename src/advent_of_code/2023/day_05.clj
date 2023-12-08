@@ -50,6 +50,17 @@
   (let [[destination-start source-start range-length] value-range]
     [[source-start (+ source-start (dec range-length))] (- destination-start source-start)]))
 
+(def data-2 (->> (map #(assoc %
+                         :type (last (:type %))
+                         :values (->> (map translate-to-range (:values %))
+                                      (sort-by ffirst))) (rest data))))
+
+(def seed-ranges (->> (first data)
+                      :values
+                      (partition 2)
+                      (map (fn [[start len]] [start (+ start (dec len))]))
+                      (sort-by first)))
+
 (defn includes? "returns true if x is in range"
   [[fst lst incl cmp] x]
   (let [cmp (or cmp compare)]
@@ -61,50 +72,49 @@
     (or (includes? r2 fst1) (includes? r1 fst2))
     (or (overlaps? r1 r2) (some #(overlaps? r1 %) rest) (some #(overlaps? r2 %) rest))))
 
-;; https://github.com/narimiran/AdventOfCode2023/blob/main/clojure/day05.clj
+(defn translate-seed [seed-range translation-values]
+  (let [[translation-range difference] translation-values]
+    (if (overlaps? seed-range translation-range)
+      (let [[sx sy] seed-range
+            [tx ty] translation-range]
+        (println [sx sy] [tx ty])
+        {:overlapped? true :result (cond
+                                     (< sx tx sy ty)
+                                     [[sx (dec tx)] [(+ difference tx) (+ sy difference)]]
 
-(def seed-ranges (->> (first data)
-                      :values
-                      (partition 2)
-                      (map (fn [[start len]] {:start start :stop (+ start (dec len))}))
-                      (sort-by :start)))
+                                     (< tx sx ty sy)
+                                     [[(+ difference sx) (+ difference ty)] [(inc ty) sy]]
 
-(def part-2-data (->> (map :values (rest data))
-                      (map (fn [value-vectors]
-                             (->> (map (fn [[destination source length]]
-                                         {:lo   source
-                                          :hi   (+ source (dec length))
-                                          :diff (- destination source)})
-                                       value-vectors)
-                                  (sort-by :lo))))))
+                                     (< sx tx ty sy)
+                                     [[sx (dec tx)] [(+ difference tx) (+ difference ty)] [(inc ty) sy]]
 
-(defn convert-2 [srcs rules]
-  (loop [[{:keys [start stop]} & rem-srcs :as srcs] srcs
-         [{:keys [lo hi diff]} & rem-rules :as rules] rules
-         result []]
-    (if (or (empty? srcs) (empty? rules))
-      (sort-by :start (into result srcs))
-      (cond
-        (> start hi)          (recur srcs rem-rules result)
-        (< stop lo)           (recur rem-srcs
-                                     rules
-                                     (conj result {:start start
-                                                   :stop  stop}))
-        (<= lo start stop hi) (recur rem-srcs
-                                     rules
-                                     (conj result {:start (+ diff start)
-                                                   :stop  (+ diff stop)}))
-        (<= lo start hi stop) (recur (conj rem-srcs {:start (inc hi)
-                                                     :stop  stop})
-                                     rem-rules
-                                     (conj result {:start (+ diff start)
-                                                   :stop  (+ diff hi)}))
-        (<= start lo stop hi) (recur rem-srcs
-                                     rules
-                                     (-> result
-                                         (conj {:start start
-                                                :stop  (dec lo)})
-                                         (conj {:start (+ diff lo)
-                                                :stop  (+ diff stop)})))))))
+                                     (< tx sx sy ty)
+                                     [[(+ difference sx) (+ difference sy)]]
 
+                                     :else [seed-range])})
+      {:overlapped? false :result [seed-range]})))
 
+(defn seed-through-ranges [seed-range ranges]
+  (let [results (map #(translate-seed seed-range %) ranges)]
+    (println results)
+    (if (zero? (count (filter :overlapped? results)))
+      [seed-range]
+      (->> (filter :overlapped? results)
+           (map :result)
+           (apply concat)))))
+
+(defn translate-seeds [input-seed-ranges translate-key]
+  (let [translation-values (first (filter #(= translate-key (:type %)) data-2))]
+    (loop [seeds input-seed-ranges
+           result []]
+      (if (empty? seeds)
+        (sort-by first result)
+        (recur
+          (rest seeds)
+          (concat result (seed-through-ranges (first seeds) (:values translation-values))))))))
+
+(defn part-2 []
+  (-> (translate-seeds seed-ranges "soil")
+      (translate-seeds "fertilizer")
+      (translate-seeds "water")
+      (translate-seeds "light")))
