@@ -73,35 +73,67 @@
     (or (overlaps? r1 r2) (some #(overlaps? r1 %) rest) (some #(overlaps? r2 %) rest))))
 
 (defn translate-seed [seed-range translation-values]
-  (let [[translation-range difference] translation-values]
-    (if (overlaps? seed-range translation-range)
-      (let [[sx sy] seed-range
-            [tx ty] translation-range]
-        (println [sx sy] [tx ty])
-        {:overlapped? true :result (cond
-                                     (< sx tx sy ty)
-                                     [[sx (dec tx)] [(+ difference tx) (+ sy difference)]]
+  (let [[translation-range difference] translation-values
+        [sx sy] seed-range
+        [tx ty] translation-range]
+    (cond
+      (<= sx tx sy ty)
+      (cond
+        (= sx tx)
+        {:translated [[(+ difference tx) (+ sy difference)]] :carry [] :overlaps :right}
 
-                                     (< tx sx ty sy)
-                                     [[(+ difference sx) (+ difference ty)] [(inc ty) sy]]
+        :else
+        {:translated [[(+ difference tx) (+ sy difference)]] :carry [[sx (dec tx)]] :overlaps :right})
 
-                                     (< sx tx ty sy)
-                                     [[sx (dec tx)] [(+ difference tx) (+ difference ty)] [(inc ty) sy]]
+      (<= tx sx ty sy)
+      (cond
+        (= ty sy)
+        {:translated [[(+ difference sx) (+ difference ty)]] :carry [] :overlaps :left}
 
-                                     (< tx sx sy ty)
-                                     [[(+ difference sx) (+ difference sy)]]
+        :else
+        {:translated [[(+ difference sx) (+ difference ty)]] :carry [[(inc ty) sy]] :overlaps :left})
 
-                                     :else [seed-range])})
-      {:overlapped? false :result [seed-range]})))
+      (<= sx tx ty sy)
+      {:translated [[(+ difference tx) (+ difference ty)]] :carry [[sx (dec tx)] [(inc ty) sy]] :overlaps :inside}
+
+      (<= tx sx sy ty)
+      {:translated [[(+ difference sx) (+ difference sy)]] :carry [] :overlaps :outside}
+
+      :else
+      {:translated [] :carry [seed-range] :overlaps :none})))
 
 (defn seed-through-ranges [seed-range ranges]
   (let [results (map #(translate-seed seed-range %) ranges)]
-    (println results)
-    (if (zero? (count (filter :overlapped? results)))
+    (if (empty? (remove #(= :none (:overlaps %)) results))
       [seed-range]
-      (->> (filter :overlapped? results)
-           (map :result)
-           (apply concat)))))
+      (let [translations (->> (remove #(= :none (:overlaps %)) results))
+            lr-overlap? (->> (filter #(contains? #{:left :right} (:overlaps %)) translations)
+                             (map :overlaps)
+                             set
+                             (= #{:left :right}))]
+        (->> (mapcat (fn [translation]
+                       (cond
+                         (= :outside (:overlaps translation))
+                         (:translated translation)
+
+                         (and lr-overlap? (= :left (:overlaps translation)))
+                         (:translated translation)
+
+                         (= :left (:overlaps translation))
+                         (concat (:translated translation) (:carry translation))
+
+                         (and lr-overlap? (= :right (:overlaps translation)))
+                         (:translated translation)
+
+                         (= :right (:overlaps translation))
+                         (concat (:translated translation) (:carry translation))
+
+                         (= :inside (:overlaps translation))
+                         (:translated translation)
+
+                         :else (:carry translation)))
+                  translations)
+             (sort-by first))))))
 
 (defn translate-seeds [input-seed-ranges translate-key]
   (let [translation-values (first (filter #(= translate-key (:type %)) data-2))]
@@ -117,4 +149,8 @@
   (-> (translate-seeds seed-ranges "soil")
       (translate-seeds "fertilizer")
       (translate-seeds "water")
-      (translate-seeds "light")))
+      (translate-seeds "light")
+      (translate-seeds "temperature")
+      (translate-seeds "humidity")
+      (translate-seeds "location")
+      ffirst))
