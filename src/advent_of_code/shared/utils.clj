@@ -30,3 +30,6 @@
 
     (= y1 y2)
     (map #(vec [% y1]) (apply inclusive-range (sort [x1 x2])))))
+
+(defn index-of [needle haystack]
+  (keep-indexed #(when (= %2 needle) %1) haystack))
