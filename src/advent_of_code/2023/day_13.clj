@@ -12,7 +12,14 @@
             (range 0 (count (first board))))
        (map #(apply str %))))
 
-(defn find-reflection [board starting-column]
+(defn get-reflection-row [board]
+  (->> board
+       (map-indexed (fn [i g] [i g]))
+       (partition-by second)
+       (filter #(= 2 (count %)))
+       (map ffirst)))
+
+(defn reflection [board starting-column]
   (loop [columns [starting-column (inc starting-column)]]
     (cond
       (and (nil? (nth board (first columns) nil)) (not (nil? (nth board (second columns) nil))))
@@ -26,39 +33,19 @@
 
       :else nil)))
 
-(defn find-reflected-column [board]
-  (let [rotated (rotate-board board)
-        reflection-columns (->> rotated
-                                (map-indexed (fn [i g] [i g]))
-                                (partition-by second)
-                                (filter #(= 2 (count %)))
-                                (map ffirst))]
+(defn find-reflection [board]
+  (let [reflection-columns (get-reflection-row board)]
     (if (empty? reflection-columns)
       nil
-      (->> (map #(find-reflection rotated %) reflection-columns)
-           (remove nil?)
-           first))))
-
-(defn find-reflected-row [board]
-  (let [rotated board
-        reflection-columns (->> rotated
-                                (map-indexed (fn [i g] [i g]))
-                                (partition-by second)
-                                (filter #(= 2 (count %)))
-                                (map ffirst))]
-    (if (empty? reflection-columns)
-      nil
-      (->> (map #(find-reflection rotated %) reflection-columns)
+      (->> (map #(reflection board %) reflection-columns)
            (remove nil?)
            first))))
 
 (defn part-1 []
-  (->> (map #(array-map :horizontal (find-reflected-row %)
-                        :vertical (find-reflected-column %)) data)
+  (->> (map #(array-map :horizontal (find-reflection %)
+                        :vertical (find-reflection (rotate-board %))) data)
        (reduce (fn [acc m]
                  (cond
-
-
                    (nil? (:vertical m))
                    (+ acc (* 100 (inc (first (:horizontal m)))))
 
@@ -94,13 +81,6 @@
             (assoc (vec board) smudge-index smudge-row)))
         smudge-rows))))
 
-(defn get-reflection-row [board]
-  (->> board
-       (map-indexed (fn [i g] [i g]))
-       (partition-by second)
-       (filter #(= 2 (count %)))
-       (map ffirst)))
-
 (defn is-valid-reflection? [board column]
   (loop [columns [column (inc column)]]
     (cond
@@ -116,15 +96,18 @@
       :else false)))
 
 (defn find-valid-reflection [board replaced-smudge-board]
-  (let [old-reflection-columns (filter #(is-valid-reflection? board %) (get-reflection-row board))]
-    (if (nil? replaced-smudge-board)
+  (let [old-reflection-columns (filter #(is-valid-reflection? board %) (get-reflection-row board))
+        reflection-columns (get-reflection-row replaced-smudge-board)]
+    (cond
+      (nil? replaced-smudge-board)
       nil
-      (let [reflection-columns (get-reflection-row replaced-smudge-board)]
-        (if (empty? reflection-columns)
-          nil
-          (-> (set (filter #(is-valid-reflection? replaced-smudge-board %) reflection-columns))
-              (set/difference (set old-reflection-columns))
-              first))))))
+
+      (empty? reflection-columns)
+      nil
+
+      :else (-> (set (filter #(is-valid-reflection? replaced-smudge-board %) reflection-columns))
+               (set/difference (set old-reflection-columns))
+               first))))
 
 (defn valid-reflections [board]
   (let [replaced-smudge-boards (replace-smudge-in-row board)]
@@ -134,7 +117,7 @@
 
 (defn part-2 []
   (->> (map #(array-map :horizontal (valid-reflections %)
-                        :vertical  (valid-reflections (rotate-board %))) data)
+                        :vertical (valid-reflections (rotate-board %))) data)
        (reduce (fn [acc m]
                  (cond
                    (nil? (:vertical m))
