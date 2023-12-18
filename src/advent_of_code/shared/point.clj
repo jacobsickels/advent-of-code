@@ -3,9 +3,9 @@
             [advent-of-code.shared.utils :as utils]))
 
 (defn points-around [point]
-  (remove (fn [p] (= point p))
-          (apply combo/cartesian-product
-                 (map #(range (dec %) (+ 2 %)) point))))
+  (->> (map #(utils/inclusive-range (dec %) (inc %)) point)
+       (apply combo/cartesian-product)
+       (remove (fn [p] (= point p)))))
 
 (defn cardinal-points-around [[x y]]
   (list [(inc x) y]
@@ -14,8 +14,9 @@
         [x (dec y)]))
 
 (defn points-around-inclusive [point]
-  (sort-by second (apply combo/cartesian-product
-                         (map #(range (dec %) (+ 2 %)) point))))
+  (->> (map #(utils/inclusive-range (dec %) (inc %)) point)
+       (apply combo/cartesian-product)
+       (sort-by second)))
 
 (defn manhattan-distance [[x1 y1] [x2 y2]]
   (+ (Math/abs (- x1 x2)) (Math/abs (- y1 y2))))
