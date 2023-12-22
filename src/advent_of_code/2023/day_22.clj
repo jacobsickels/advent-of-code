@@ -87,8 +87,35 @@
 
 (defn part-1 []
   (let [rested-blocks (blocks-to-rest data)
-        _ (println "rested")
         supported-blocks (find-supports rested-blocks)]
-    (println "supports")
     (frequencies (map #(can-block-be-removed? (:block %) supported-blocks) supported-blocks))))
+
+
+(defn collapsed-blocks [block rested-block-supports]
+  (let [next-supports (->>
+                        (remove #(= block (:block %)) rested-block-supports)
+                        (map #(if (= :ground (:supports %))
+                                %
+                                (assoc % :supports (remove (fn [support-block] (= support-block block)) (:supports %))))))]
+    [next-supports (->> (filter #(if (= :ground (:supports %))
+                                   false
+                                   (empty? (:supports %))) next-supports)
+                        (map :block))]))
+(defn count-collapsed [removed-block support-blocks]
+  (loop [supports support-blocks
+         to-remove #{removed-block}
+         cnt 0]
+    (if (empty? to-remove)
+      (dec cnt)
+      (let [block-to-remove (first to-remove)
+            [next-supports next-to-remove] (collapsed-blocks block-to-remove supports)]
+        (recur next-supports (disj (set/union to-remove (set next-to-remove)) block-to-remove) (inc cnt))))))
+
+(defn part-2 []
+  (let [rested-blocks (blocks-to-rest data)
+        supported-blocks (find-supports rested-blocks)
+        check-removal (->> (map #(vector (:block %) (can-block-be-removed? (:block %) supported-blocks)) supported-blocks)
+                           (filter #(false? (second %)))
+                           (map first))]
+    (map #(count-collapsed % supported-blocks) check-removal)))
 
