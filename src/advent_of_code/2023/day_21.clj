@@ -68,7 +68,7 @@
   (loop [points [(conj starting-point 1)]
          steps 0]
     ;(println points)
-    (if (= steps 10)
+    (if (= steps 8)
       points
       (let [next-steps (->> points
                             (mapcat (fn [[x y amt]] (map (fn [point] (conj point amt)) (points/cardinal-points-around [x y]))))
