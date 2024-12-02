@@ -33,3 +33,9 @@
 
 (defn index-of [needle haystack]
   (keep-indexed #(when (= %2 needle) %1) haystack))
+
+(defn index-exclude [r ex]
+  (filter #(not (ex %)) (range r)))
+
+(defn dissoc-idx [v & ds]
+  (map v (index-exclude (count v) (into #{} ds))))
