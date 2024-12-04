@@ -28,3 +28,8 @@
 
     (= y1 y2)
     (map #(vec [% y1]) (apply utils/inclusive-range (sort [x1 x2])))))
+
+(defn get-all-points [col]
+  (let [width (range 0  (count (first col)))
+        height (range 0  (count col))]
+    (combo/cartesian-product width height)))
