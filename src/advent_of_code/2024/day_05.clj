@@ -24,21 +24,8 @@
       ;; If this count is 1 this doesn't have the values to follow the rule
       true)))
 
-(defn is-page-valid? [page update rules]
-  (let [relavent-rules (filter #(or (= (first %) page) (= (second %) page)) rules)]
-    (every? #(follows-rule? update (vec %)) relavent-rules)))
-
-(defn is-update-valid? [update rules]
-  (every? #(is-page-valid? % update rules) update))
-
 (defn get-middle [update]
   (nth update (quot (count update) 2)))
-
-(defn part-1 []
-  (->> (filter #(is-update-valid? % rules) updates)
-       (map get-middle)
-       (reduce +)))
-
 
 (defn is-valid-2-pages? [[p1 p2]]
   (every? #(follows-rule? [p1 p2] %) rules))
@@ -48,23 +35,30 @@
 
 (defn do-swaps [bad-update]
   (loop [col bad-update
-         swaps 0
+         did-swap false
          acc []]
     (if (empty? col)
-      [acc swaps]
+      [acc did-swap]
       (if (is-valid-2-pages? [(first col) (second col)])
-        (recur (rest col) swaps (conj acc (first col)))
-        (recur (do-swap col) (inc swaps) acc)))))
+        (recur (rest col) did-swap (conj acc (first col)))
+        (recur (do-swap col) true acc)))))
+
+(defn is-update-valid? [update]
+  (not (second (do-swaps update))))
+(defn part-1 []
+  (->> (filter #(is-update-valid? %) updates)
+       (map get-middle)
+       (reduce +)))
 
 (defn fix-bad-update [bad-update]
   (loop [col bad-update]
-    (let [[swapped swaps] (do-swaps col)]
-      (if (zero? swaps)
-        swapped
-        (recur swapped)))))
+    (let [[swapped-update did-swap?] (do-swaps col)]
+      (if (not did-swap?)
+        swapped-update
+        (recur swapped-update)))))
 
 (defn part-2 []
-  (->> (remove #(is-update-valid? % rules) updates)
+  (->> (remove #(is-update-valid? %) updates)
        (map fix-bad-update)
        (map get-middle)
        (reduce +)))
