@@ -84,7 +84,7 @@
                         (-> (assoc acc space-pointer new-file)
                             (assoc file-pointer (repeat (count new-file) nil))
                             (list-insert left-over-spaces (inc space-pointer))))]
-          (recur 0 (dec file-pointer) (vec new-acc)))
+          (recur 0 file-pointer (vec new-acc)))
 
         :else
         (recur (inc space-pointer) file-pointer acc)))))
