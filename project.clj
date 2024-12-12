@@ -7,5 +7,6 @@
                  [org.clojure/math.combinatorics "0.1.6"]
                  [org.clojure/data.json "2.4.0"]
                  [org.clojure/data.priority-map "1.1.0"]
-                 [aysylu/loom "1.0.2"]]
+                 [aysylu/loom "1.0.2"]
+                 [dev.weavejester/medley "1.8.1"]]
   :repl-options {:init-ns advent-of-code.core})

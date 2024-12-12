@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="Leiningen: dev.weavejester/medley:1.8.1">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/dev/weavejester/medley/1.8.1/medley-1.8.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
