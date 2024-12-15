@@ -69,7 +69,7 @@
          cnt 0]
     (let [in-line (count-robots-in-largest-line robots)]
       (if (< to-cnt in-line)
-        cnt ;;(print-robots robots width height)
+        (print-robots robots width height)
         (recur (map #(next-robot-position % width height) robots) (inc cnt))))))
 
 (defn part-2 []
