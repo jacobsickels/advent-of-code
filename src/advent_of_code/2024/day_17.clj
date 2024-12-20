@@ -71,28 +71,15 @@
                      :b   0
                      :c   0
                      :out []})
-;; [4 3 2 6 4 5 3 2 4]
-
-;; [1 3 2 6 4 5 3 2 4] +2
-;; [1 3 2 6 4 5 3 2 4] -1
-
-;; [0 3 2 6 4 5 3 2 4] -4
-;; [0 3 2 6 4 5 3 2 4] +1
-
-;; [5 3 2 6 4 5 3 2 4] -2
-;; [5 3 2 6 4 5 3 2 4] +3
-
-;; [4 3 2 6 4 5 3 2 4] -3
-;; [4 5 2 6 4 5 3 2 4] +4
 
 (defn run-program [input input-registers]
   (let [instructions input]
     (loop [registers input-registers
            pointer 0
            done nil]
-      (println registers)
+      #_(println registers)
       (if done
-        (:out registers)
+        (mapv int (:out registers))
         (if (= pointer (dec (count instructions)))
           registers
           (let [[new-registers new-pointer done?] (do-instruction registers
@@ -105,6 +92,37 @@
 (defn part-1 [input input-registers]
   (run-program input input-registers))
 
-(defn part-2 [a-register]
-  (let [registers {:a a-register :b 0 :c 0 :out []}]
-     (run-program data registers)))
+;(defn part-2 [a-register]
+;  (let [registers {:a a-register :b 0 :c 0 :out []}]
+;     (run-program data registers)))
+
+
+(defn matches-program [next-program]
+  (every? true? (map #(= %1 %2) data next-program)))
+
+;(defn find-amount []
+;  (loop [
+;         ;amount (* 4096 8589934591)
+;         amount (* 4096 68719476735)
+;         adds 1]
+;    (let [next-program (part-2 amount)]
+;      (println amount next-program (count next-program))
+;      (recur (+ amount adds) adds))))
+
+;(loop [check 164000000000000
+;       amount 1000000
+;       ittr 0]
+;  (if (= ittr 2000)
+;    check
+;    (do
+;      (println  check (part-2 check) (count (part-2 check)))
+;      (recur (+ check amount) amount (inc ittr)))))
+
+;; (loop [check 164540892147320
+;       amount              1
+;       ittr 0]
+;  (if (= ittr 100)
+;    check
+;    (do
+;      (println  check (part-2 check) (count (part-2 check)))
+;      (recur (+ check amount) amount (inc ittr)))))

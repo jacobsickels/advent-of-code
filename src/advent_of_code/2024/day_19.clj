@@ -35,6 +35,7 @@
 
 (defn iterate-point-map [design]
   (loop [pattern-map (memoized-get-pattern-map design 0)]
+    (println (translate-point-map design pattern-map))
     (cond
       (empty? pattern-map)
       {}
