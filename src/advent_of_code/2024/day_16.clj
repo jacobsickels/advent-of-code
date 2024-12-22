@@ -38,115 +38,92 @@
                           :down :up
                           :right :left
                           :left :right})
-;(defn get-next-paths [path]
-;  (let [[x y] (:point path)
-;        direction (:direction path)
-;        count (:count path)
-;        points-around (set (points/cardinal-points-around [x y]))
-;        directions-around (map #(hash-map :point %  :direction (get-direction [x y] %) :count count) (set/difference points-around walls))]
-;    (remove #(= direction (get filtered-directions (:direction %))) directions-around)))
 
-;(defn get-next-path-costs [paths costs]
-;  (loop [p paths
-;         acc []]
-;    (if (empty? p)
-;      (flatten acc)
-;      (let [next-paths (get-next-paths (first p))]
-;        (recur (rest p)
-;               (conj acc (map (fn [next-path] (if (= (:direction (first p)) (:direction next-path))
-;                                                (assoc next-path :cost (+ (get costs (:point (first p))) 1))
-;                                                (assoc next-path :cost (+ (get costs (:point (first p))) 1001))))
-;                              next-paths)))))))
-
-;(defn paths-to-cost [paths cost]
-;  (reduce (fn [acc path]
-;            (let [point (:point path)
-;                  path-cost (:cost path)]
-;              (cond
-;                (and (contains? cost point) (= (get cost point) path-cost))
-;                [(conj (first acc) path) (second acc)]
-;
-;                (and (contains? cost point) (< (get cost point) path-cost))
-;                [(first acc) (second acc)]
-;
-;                :else
-;                [(conj (first acc) path) (assoc (second acc) point path-cost)])))
-;
-;          [[] cost]
-;          paths))
-;(defn part-1 []
-;  (loop [paths [{ :point start :direction :right :count 1}]
-;         costs {start 0}]
-;    (if (empty? paths)
-;      (get costs end)
-;      (let [next-paths (get-next-path-costs paths costs)
-;            [next-paths next-costs] (paths-to-cost next-paths costs)]
-;        (recur next-paths next-costs)))))
-
-
-
-
-;; NOT MY CODE
-(def ^:private inf Double/POSITIVE_INFINITY)
-
-(defn update-costs
-  "Returns costs updated with any shorter paths found to curr's unvisited
-  neighbors by using curr's shortest path"
-  [g costs unvisited curr]
-  (let [curr-cost (get costs curr)]
-    (reduce-kv
-      (fn [c nbr nbr-cost]
-        (if (unvisited nbr)
-          (update-in c [nbr] min (+ curr-cost nbr-cost))
-          c))
-      costs
-      (get g curr))))
-
-(defn dijkstra
-  "Returns a map of nodes to minimum cost from src using Dijkstra algorithm.
-  Graph is a map of nodes to map of neighboring nodes and associated cost.
-  Optionally, specify destination node to return once cost is known"
-  ([g src]
-   (dijkstra g src nil))
-  ([g src dst]
-   (loop [costs     (assoc (zipmap (keys g) (repeat inf)) src 0)
-          curr      src
-          unvisited (disj (apply hash-set (keys g)) src)]
-     (cond
-       (= curr dst)
-       (select-keys costs [dst])
-
-       (or (empty? unvisited) (= inf (get costs curr)))
-       costs
-
-       :else
-       (let [next-costs (update-costs g costs unvisited curr)
-             next-node  (apply min-key next-costs unvisited)]
-         (recur next-costs next-node (disj unvisited next-node)))))))
-;; END NOT MY CODE
-
-(defn get-cost-between [p1 p2]
+(defn get-cost [p1 p2]
   (if (not= (last p1) (last p2)) 1001 1))
-(defn get-points-around [[x y]]
-  (let [points-around (set (points/cardinal-points-around [x y]))
-        directions-around (map #(conj % (get-direction [x y] %)) points-around)]
-    (remove (fn [[x y d]] (contains? walls [x y])) directions-around)))
 
-(defn get-directions-around [[x y]]
-  (let [points-around (set (points/cardinal-points-around [x y]))
-        directions-around (map #(get-direction [x y] %) (set/intersection walls points-around))]
-    directions-around))
+(defn get-next-points [path]
+  (let [point (:point path)
+        direction (:direction path)
+        points-around (points/cardinal-points-around point)]
+    (->> (set/difference (set points-around) walls)
+         (map #(conj (vec %) (get-direction point (vec %))))
+         (remove #(= (last %) (get filtered-directions direction))))))
 
-(defn get-graph-costs []
-  (let [direction-points (mapcat #(map (fn [direction] (conj % direction)) (get-directions-around %)) (set/union spaces #{end}))
-        direction-points (conj direction-points (conj start :right))]
-    (->> (map #(let [points-around (get-points-around %)]
-                 (println "points-around" % points-around)
-                 {% (reduce (fn [acc p] (assoc acc p (get-cost-between % p)))
-                            {}
-                            (set/intersection (set direction-points) (set points-around)))})
-              direction-points)
-         (apply merge))))
+(defn update-visited [path visited]
+  (let [k (conj (:point path) (:direction path))
+        v (:cost path)]
+    (cond
+      (contains? visited k)
+      (let [current-cost (:cost (get visited k))]
+        (if (< v current-cost)
+          (assoc visited k (assoc (get visited k) :cost v))
+          visited))
+
+      :else
+      (assoc visited k {:cost v}))))
+
+(defn get-next-paths [path visited]
+  (let [point (:point path)
+        cost (:cost path)
+        direction (:direction path)
+        next-points (get-next-points path)]
+    (->> (map #(hash-map :point (vec (take 2 %))
+                         :points (conj (:points path) (vec (take 2 %)))
+                         :cost (+ cost (get-cost (conj point direction) %))
+                         :direction (last %))
+              next-points)
+         (filter #(let [check (conj (:point %) (:direction %))
+                        curr-path-cost (:cost %)
+                        value (:cost (get visited check))]
+                    (cond
+                      (not (nil? value))
+                      (< curr-path-cost value)
+
+                      :else true))))))
+
+
+
+(defn part-1 []
+  (loop [paths [{:point start :points #{start} :direction :right :cost 0}]
+         visited {(conj start :right) {:cost 0 :count 1}}
+         acc []
+         ittr 0]
+    (if (empty? paths)
+      (->> (map :cost acc)
+           (sort)
+           (first))
+      (let [next-paths (mapcat #(get-next-paths % visited) paths)]
+        (recur next-paths
+               (reduce (fn [acc path] (update-visited path acc))
+                       visited
+                       next-paths)
+               (concat acc (filter #(= end (:point %)) next-paths))
+               (inc ittr))))))
+
+(defn part-2 []
+  (loop [paths [{:point start :points #{start} :direction :right :cost 0}]
+         visited {(conj start :right) {:cost 0 :count 1}}
+         acc []
+         ittr 0]
+    (if (empty? paths)
+      (let [best-cost (->> (map :cost acc)
+                           (sort)
+                           (first))]
+        (->> (filter #(= best-cost (:cost %)) acc)
+             (mapcat :points)
+             set
+             count))
+      (let [next-paths (mapcat #(get-next-paths % visited) paths)]
+        (recur next-paths
+               (reduce (fn [acc path] (update-visited path acc))
+                       visited
+                       next-paths)
+               (concat acc (filter #(= end (:point %)) next-paths))
+               (inc ittr))))))
+
+
+
 
 
 

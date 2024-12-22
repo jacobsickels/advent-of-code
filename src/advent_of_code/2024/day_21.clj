@@ -110,6 +110,12 @@
            {:code [\A 8 0 2 \A] :num 802}
            {:code [\A 8 0 5 \A] :num 805}])
 
+(def data [{:code [\A 2 8 6 \A] :num 286}
+           {:code [\A 9 7 4 \A] :num 974}
+           {:code [\A 1 8 9 \A] :num 189}
+           {:code [\A 8 0 2 \A] :num 802}
+           {:code [\A 8 0 5 \A] :num 805}])
+
 (defn part-1 [input]
   (->> (map #(* (do-presses (:code %)) (:num %)) input)
        (reduce +)))
