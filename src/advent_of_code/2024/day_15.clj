@@ -4,8 +4,8 @@
             [clojure.string :as str]))
 
 (def data (->> (read/read-file "resources/2024/day_15.txt")
-               (partition-by empty?)
-               ))
+               (partition-by empty?)))
+
 
 (def warehouse (first data))
 (def movements (->> (last data) (apply str)))
