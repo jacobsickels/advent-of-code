@@ -59,10 +59,8 @@
 
 (defn part-2 []
   (let [all-polygons (->> (find-all-areas corners)
-                          (map first)
-                          (map #(hash-map :corners % :polygon (create-polygon-from-corners %))))]
-    (->> (filter #(polygon-contains-polygon? boundary (:polygon %)) all-polygons)
-         (map :corners)
+                          (map first))]
+    (->> (filter #(polygon-contains-polygon? boundary (create-polygon-from-corners %)) all-polygons)
          (map (fn [points] (find-area (first points) (second points))))
          (sort)
          (last))))
