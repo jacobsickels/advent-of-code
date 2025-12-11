@@ -61,6 +61,7 @@
        (reduce +)))
 
 ;; =========================== Not finished
+;; Looks like a system of equations but not sure how to solve
 
 (defn button-to-joltage [joltage-input button]
   (loop [b button
@@ -69,35 +70,53 @@
       template
       (recur (rest b) (assoc template (first b) 1)))))
 
-(defn press-joltage-button [joltage-input button]
-  (map (fn [a b] (+ a b)) joltage-input (button-to-joltage joltage-input button)))
+(use 'clocop.core
+     'clocop.constraints)
 
-(defn press-joltage-buttons [joltage-input buttons]
-  (map #(press-joltage-button joltage-input %) buttons))
+(defn testing-out-clocop []
+  (with-store (store)                                       ; initialize the variable store
+              (let [a (int-var "a" 0 1000)                  ;; [3]
+                    b (int-var "b" 0 1000)                  ;; [1,3]
+                    c (int-var "c" 0 1000)                  ;; [2]
+                    d (int-var "d" 0 1000)                  ;; [2,3]
+                    e (int-var "e" 0 1000)                  ;; [0,2]
+                    f (int-var "f" 0 1000)                  ;; [0,1]]
+                    w (int-var "w" 3)
+                    x (int-var "x" 5)
+                    y (int-var "y" 4)
+                    z (int-var "z" 7)]
+                ; setting constraints
+                (constrain! ($= ($+ e f) w))
+                (constrain! ($= ($+ b f) x))
+                (constrain! ($= ($+ c d e) y))
+                (constrain! ($= ($+ a b d) z))
+                (solve!))))
 
-(defn press-buttons-for-joltages [joltage-inputs buttons]
-  (mapcat #(press-joltage-buttons % buttons) joltage-inputs))
+(def alphabet "abcdefghijklmnopqrstuvwxyz")
 
-(defn bfs-to-input-2 [input buttons]
-  (loop [visited #{(repeat (count input) 0)}
-         ittr 0]
-    (if (presses-contain-input? visited input)
-      ittr
-      (let [next-presses (set (press-buttons-for-joltages visited buttons))]
-        (recur (set/union visited next-presses)
-               (inc ittr))))))
-
+(defn get-solution-value [solution]
+  (->> (map #(get solution (str %)) alphabet)
+       (take-while #(not (nil? %)))
+       (reduce +)))
+(defn solver [entry]
+  (let [solutions (with-store (store)
+                              (let [button-ints (vec (map-indexed (fn [idx btn] {:btn btn :variable (int-var (str (get alphabet idx)) 0 1000)}) (:buttons entry)))
+                                    constraints (vec (map-indexed (fn [idx jolt] {:jolt-index idx :variable (int-var (str (nth (reverse alphabet) idx)) jolt)}) (:joltage entry)))
+                                    _ (vec (map (fn [constraint]
+                                                  (let [constraint-vars (->> (filter (fn [btn] (contains? (set (:btn btn)) (:jolt-index constraint))) button-ints)
+                                                                             (mapv :variable))]
+                                                    (constrain! ($= (:variable constraint) (if (= 1 (count constraint-vars))
+                                                                                             (first constraint-vars)
+                                                                                             (apply $+ constraint-vars))))))
+                                                constraints))]
+                                (solve! :solutions :all)))]
+    (->> (map get-solution-value solutions)
+         (sort)
+         (first))))
 
 (defn part-2 []
-  (->> (map #(bfs-to-input-2 (:joltage %) (:buttons %)) parsed-data)
+  (->> (map #(solver %) parsed-data)
        (reduce +)))
-
-
-
-
-
-
-
 
 
 

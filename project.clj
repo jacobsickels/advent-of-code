@@ -10,5 +10,6 @@
                  [org.clojure/data.priority-map "1.1.0"]
                  [aysylu/loom "1.0.2"]
                  [dev.weavejester/medley "1.8.1"]
-                 [org.locationtech.jts/jts-core "1.20.0"]]
+                 [org.locationtech.jts/jts-core "1.20.0"]
+                 [clocop "0.2.0"]]
   :repl-options {:init-ns advent-of-code.core})
